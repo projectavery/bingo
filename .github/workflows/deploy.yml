@@ -1,26 +1,31 @@
+# 建議將 .github/workflows/deploy.yml 更新為此版本
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main  # 或是您使用的預設分支名稱
+    branches: ["main"] # 請確認您的分支名稱是 main
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 確保同時只有一個部署在進行
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
-  build_site:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: 'npm'
 
       - name: Install dependencies
@@ -31,19 +36,15 @@ jobs:
         env:
           VITE_GOOGLE_APP_SCRIPT_URL: ${{ secrets.VITE_GOOGLE_APP_SCRIPT_URL }}
 
-      - name: Upload Artifacts
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 此處填寫 Vite 產出的目錄，預設為 dist
-          path: 'dist/'
+          path: ./dist
 
   deploy:
-    needs: build_site
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
     steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
