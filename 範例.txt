@@ -35,6 +35,9 @@
 
 ============================================================================================================================
 
+git config --global user.name "projectavery"
+git config --global user.email "avery16899@gmail.com"
+
 請設計能自動部屬到github pages的action
 會使用到的環境變數請參考 .env.exmaple檔
 並將操作流程更新到readme.md文件
