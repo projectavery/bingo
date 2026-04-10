@@ -10,17 +10,22 @@ const RedeemPage = () => {
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchPrize = async (num = ticketNo) => {
     if (!num) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await gasApi.query(num);
-      // 精確比對號碼
       const exactMatch = Array.isArray(data) ? data.find(p => String(p['摸彩卷號碼']) === String(num)) : null;
       setPrizeData(exactMatch);
-    } catch (error) {
-      console.error(error);
+      if (!exactMatch) {
+        setError('找不到該中獎號碼，請確認號碼是否正確。');
+      }
+    } catch (err) {
+      setError(err.message);
+      setPrizeData(null);
     } finally {
       setLoading(false);
     }
@@ -47,8 +52,8 @@ const RedeemPage = () => {
       });
       // 重新整理資料
       await fetchPrize(prizeData['摸彩卷號碼']);
-    } catch (error) {
-      alert('兌獎失敗，請稍後再試');
+    } catch (err) {
+      alert(`兌獎失敗：${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -89,6 +94,12 @@ const RedeemPage = () => {
 
         {showScanner && <Scanner onScanSuccess={onScanSuccess} />}
       </div>
+
+      {error && !loading && (
+        <div className="glass animate-fade" style={{ padding: '15px', marginBottom: '20px', border: '1px solid var(--error)', color: 'var(--error)', textAlign: 'center' }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {loading && <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>處理中...</p>}
 

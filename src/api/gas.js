@@ -1,40 +1,78 @@
 const GOOGLE_APP_SCRIPT_URL = import.meta.env.VITE_GOOGLE_APP_SCRIPT_URL;
 
+// 檢查環境變數是否設定
+const checkConfig = () => {
+  if (!GOOGLE_APP_SCRIPT_URL) {
+    console.error('❌ 錯誤：未設定 VITE_GOOGLE_APP_SCRIPT_URL 環境變數。請在 .env 或 GitHub Secrets 中設定。');
+    return false;
+  }
+  return true;
+};
+
 export const gasApi = {
   async query(ticketNo = '') {
-    const url = `${GOOGLE_APP_SCRIPT_URL}?action=query&ticketNo=${ticketNo}`;
-    const response = await fetch(url);
-    return response.json();
+    if (!checkConfig()) throw new Error('API 網址未設定');
+    
+    try {
+      const url = `${GOOGLE_APP_SCRIPT_URL}?action=query&ticketNo=${ticketNo}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('連線失敗');
+      return await response.json();
+    } catch (error) {
+      console.error('Query Error:', error);
+      throw error;
+    }
   },
 
   async import(data) {
-    const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors', // 重要：GAS 通常需要 no-cors 或處理轉向
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'import',
-        data: data
-      })
-    });
-    // 注意：no-cors 模式下無法讀取 response body，
-    // 如果需要確認成功，GAS 必須設定正確的 CORS 或是使用其他方式。
-    // 這裡我們假設呼叫成功即成功，或提醒使用者 GAS 需正確處理權限。
-    return { success: true };
+    if (!checkConfig()) throw new Error('API 網址未設定');
+
+    try {
+      const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+        method: 'POST',
+        // 使用 text/plain 可以避免 CORS preflight (OPTIONS 請求) 在某些瀏覽器失敗
+        // GAS 的 doPost 可以正確讀取 postData.contents 並解析 JSON
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          action: 'import',
+          data: data
+        })
+      });
+      
+      if (!response.ok) throw new Error('上傳失敗');
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+      return result;
+    } catch (error) {
+      console.error('Import Error:', error);
+      throw error;
+    }
   },
 
   async update(params) {
-    const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
-      method: 'POST',
-      // GAS POST 請求通常需要跟隨轉向，fetch 直接處理可能會有 CORS 問題。
-      // 建議 GAS 部署時將權限設為 Anyone。
-      body: JSON.stringify({
-        action: 'update',
-        ...params
-      })
-    });
-    return response.json();
+    if (!checkConfig()) throw new Error('API 網址未設定');
+
+    try {
+      const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          ...params
+        })
+      });
+      
+      if (!response.ok) throw new Error('更新失敗');
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+      return result;
+    } catch (error) {
+      console.error('Update Error:', error);
+      throw error;
+    }
   }
 };

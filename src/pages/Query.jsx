@@ -8,18 +8,23 @@ const QueryPage = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSearch = async (num = ticketNo) => {
-    const cleanNum = String(num).trim(); // 強制去空格
+    const cleanNum = String(num).trim();
     if (!cleanNum) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await gasApi.query(cleanNum);
-      // 改為精確比對，實現單筆查詢效果
       const exactMatch = Array.isArray(data) ? data.filter(item => String(item['摸彩卷號碼']) === String(num)) : [];
       setResults(exactMatch);
-    } catch (error) {
-      console.error(error);
+      if (exactMatch.length === 0) {
+        // 只有在查詢成功但沒結果時才不設定 error
+      }
+    } catch (err) {
+      setError(err.message);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -63,6 +68,12 @@ const QueryPage = () => {
 
         {showScanner && <Scanner onScanSuccess={onScanSuccess} />}
       </div>
+
+      {error && (
+        <div className="glass animate-fade" style={{ padding: '15px', marginBottom: '20px', border: '1px solid var(--error)', color: 'var(--error)', textAlign: 'center' }}>
+          ⚠️ 查詢失敗：{error}
+        </div>
+      )}
 
       <div className="results-list">
         {loading ? (

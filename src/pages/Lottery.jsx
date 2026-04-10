@@ -54,7 +54,7 @@ const LotteryPage = () => {
       setStage('');
       setRank('');
     } catch (error) {
-      setStatus({ type: 'error', message: '匯入失敗，請檢查網路連線。' });
+      setStatus({ type: 'error', message: `匯入失敗：${error.message}` });
     } finally {
       setLoading(false);
     }
