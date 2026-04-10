@@ -37,8 +37,13 @@ const LotteryPage = () => {
     setStatus(null);
 
     try {
-      const numbers = ticketNos.split(/[\n,]/).map(n => n.trim()).filter(n => n);
-      const dataToImport = numbers.map(num => ({
+      // 前端初步去重並過濾空白
+      const rawNumbers = ticketNos.split(/[\n,]/).map(n => n.trim()).filter(n => n);
+      const uniqueNumbers = [...new Set(rawNumbers)];
+      
+      const duplicateCount = rawNumbers.length - uniqueNumbers.length;
+
+      const dataToImport = uniqueNumbers.map(num => ({
         ticketNo: num,
         stage: stage,
         prizeRank: rank,
@@ -46,13 +51,27 @@ const LotteryPage = () => {
         remark: prizeInfo.remark
       }));
 
-      await gasApi.import(dataToImport);
-      setStatus({ type: 'success', message: `成功匯入 ${dataToImport.length} 筆獎項！` });
+      const result = await gasApi.import(dataToImport);
       
-      // 匯入後清除所有欄位
+      let msg = `成功匯入 ${result.count || 0} 筆獎項！`;
+      if (result.skipped && result.skipped.length > 0) {
+        msg += ` (跳過 ${result.skipped.length} 筆已存在的號碼)`;
+      }
+      if (duplicateCount > 0) {
+        msg += ` (本次重複輸入已過濾 ${duplicateCount} 筆)`;
+      }
+
+      setStatus({ 
+        type: result.count > 0 ? 'success' : 'warning', 
+        message: msg 
+      });
+      
+      // 匯入後清除號碼欄位，保留階段與獎次方便連續操作
       setTicketNos('');
-      setStage('');
-      setRank('');
+      if (result.count > 0) {
+        // 只有在成功匯入後才考慮清除
+        // 這裡暫不自動清除 stage/rank，方便使用者連續輸入
+      }
     } catch (error) {
       setStatus({ type: 'error', message: `匯入失敗：${error.message}` });
     } finally {

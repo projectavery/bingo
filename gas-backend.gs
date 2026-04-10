@@ -56,18 +56,38 @@ function doPost(e) {
 
   if (action === 'import') {
     const items = params.data;
+    const data = sheet.getDataRange().getValues();
+    // 取得現有所有摸彩卷號碼 (第一欄)，轉為字串並去除空白
+    const existingNumbers = new Set(data.slice(1).map(row => String(row[0]).trim()));
+    
+    let addedCount = 0;
+    const skipped = [];
+
     items.forEach(item => {
-      sheet.appendRow([
-        "'" + String(item.ticketNo || '').trim(), // 強制文字格式並去空格
-        item.stage || '',
-        item.prizeRank || '',
-        item.prizeContent || '',
-        item.remark || '',
-        '未兌獎',
-        '', '', '', ''
-      ]);
+      const ticketNo = String(item.ticketNo || '').trim();
+      if (existingNumbers.has(ticketNo)) {
+        skipped.push(ticketNo);
+      } else {
+        sheet.appendRow([
+          "'" + ticketNo, 
+          item.stage || '',
+          item.prizeRank || '',
+          item.prizeContent || '',
+          item.remark || '',
+          '未兌獎',
+          '', '', '', ''
+        ]);
+        existingNumbers.add(ticketNo); // 防止傳入的清單本身有重複
+        addedCount++;
+      }
     });
-    return createResponse({ success: true, count: items.length });
+
+    return createResponse({ 
+      success: true, 
+      count: addedCount, 
+      skipped: skipped,
+      total: items.length 
+    });
   }
 
   if (action === 'update') {
